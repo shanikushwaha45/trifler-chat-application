@@ -1,12 +1,15 @@
 package com.trifler.trifler_chat_application.service;
 
-import com.trifler.trifler_chat_application.config.PasswordConfig;
+import com.trifler.trifler_chat_application.dto.LoginRequestDto;
+import com.trifler.trifler_chat_application.dto.LoginResponseDto;
 import com.trifler.trifler_chat_application.dto.UserRequestDto;
 import com.trifler.trifler_chat_application.dto.UserResponseDto;
 import com.trifler.trifler_chat_application.entity.User;
 import com.trifler.trifler_chat_application.exception.DuplicateResourceException;
+import com.trifler.trifler_chat_application.exception.InvalidCredentialException;
 import com.trifler.trifler_chat_application.mapper.UserMapper;
 import com.trifler.trifler_chat_application.repository.UserRepository;
+import com.trifler.trifler_chat_application.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -21,6 +24,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     public ResponseEntity<UserResponseDto> registerUser(UserRequestDto userRequestDto){
 
@@ -31,10 +35,13 @@ public class UserService {
             throw new DuplicateResourceException("Email Already Exist ");
         }
 
+        /*
         if(userRepository.existsByUsername(userRequestDto.getUsername())){
             log.info("The username passed is already exists");
             throw new DuplicateResourceException("UserName already exist enter unique username");
         }
+
+         */
 
         log.info("The user Registration is sucsesfull");
         userRequestDto.setPassword(passwordEncoder.encode(userRequestDto.getPassword()));
@@ -43,6 +50,26 @@ public class UserService {
 
 
         return  ResponseEntity.status(HttpStatus.CREATED).body(UserMapper.toResponseDto(user));
+    }
+
+    public ResponseEntity<LoginResponseDto> login(LoginRequestDto dto) {
+
+        User user = userRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() ->
+                        new InvalidCredentialException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+            throw new InvalidCredentialException("Invalid email or password");
+        }
+        String token = jwtService.generateToken(user.getEmail());
+
+        LoginResponseDto response = new LoginResponseDto();
+        response.setMessage("Login successful");
+        response.setId(user.getId());
+        response.setEmail(user.getEmail());
+        response.setToken(token);
+
+        return ResponseEntity.ok(response);
     }
 
 }

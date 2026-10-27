@@ -21,15 +21,18 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Full name is required")
+    @NotBlank(message = "Name is required")
     @Size(max = 50, message = "Name cannot exceed 50 characters")
     @Column(nullable = false)
-    private String fullName;
+    private String name;
 
+    /*
     @NotBlank(message = "Username is required")
     @Size(max = 50, message = "Username cannot exceed 50 characters")
     @Column(nullable = false, unique = true)
     private String username;
+
+     */
 
     @NotBlank(message = "Email is required")
     @Email(message = "Enter a valid email")

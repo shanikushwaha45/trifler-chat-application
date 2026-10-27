@@ -11,10 +11,13 @@ import lombok.Setter;
 public class UserRequestDto {
 
     @NotBlank(message = "Full name is required")
-    private String fullName;
+    private String name;
 
+    /*
     @NotBlank(message = "Username is required")
     private String username;
+
+     */
 
     @NotBlank(message = "Email is required")
     @Email(message = "Enter a valid email")
