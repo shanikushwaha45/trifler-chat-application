@@ -1,12 +1,10 @@
 package com.trifler.trifler_chat_application.service;
 
-import com.trifler.trifler_chat_application.dto.LoginRequestDto;
-import com.trifler.trifler_chat_application.dto.LoginResponseDto;
-import com.trifler.trifler_chat_application.dto.UserRequestDto;
-import com.trifler.trifler_chat_application.dto.UserResponseDto;
+import com.trifler.trifler_chat_application.dto.*;
 import com.trifler.trifler_chat_application.entity.User;
 import com.trifler.trifler_chat_application.exception.DuplicateResourceException;
 import com.trifler.trifler_chat_application.exception.InvalidCredentialException;
+import com.trifler.trifler_chat_application.exception.ResourceNotFoundException;
 import com.trifler.trifler_chat_application.mapper.UserMapper;
 import com.trifler.trifler_chat_application.repository.UserRepository;
 import com.trifler.trifler_chat_application.security.JwtService;
@@ -71,5 +69,21 @@ public class UserService {
 
         return ResponseEntity.ok(response);
     }
+
+
+    public ResponseEntity<UserSearchResponseDto> searchUserByEmail(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
+
+        UserSearchResponseDto response = new UserSearchResponseDto();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+
+        return ResponseEntity.ok(response);
+    }
+
 
 }

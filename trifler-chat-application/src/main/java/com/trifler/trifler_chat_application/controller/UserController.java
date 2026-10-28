@@ -1,9 +1,6 @@
 package com.trifler.trifler_chat_application.controller;
 
-import com.trifler.trifler_chat_application.dto.LoginRequestDto;
-import com.trifler.trifler_chat_application.dto.LoginResponseDto;
-import com.trifler.trifler_chat_application.dto.UserRequestDto;
-import com.trifler.trifler_chat_application.dto.UserResponseDto;
+import com.trifler.trifler_chat_application.dto.*;
 import com.trifler.trifler_chat_application.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +15,10 @@ import java.util.Map;
 public class UserController {
     private final UserService userService;
 
+    @GetMapping("/get")
+    public String getString(){
+        return "Hello";
+    }
     @PostMapping("/register")
     public ResponseEntity<UserResponseDto> registerUser(@RequestBody @Valid UserRequestDto requestDto){
         return userService.registerUser(requestDto);
@@ -27,12 +28,10 @@ public class UserController {
     public ResponseEntity<LoginResponseDto> login(@RequestBody @Valid LoginRequestDto loginRequestDto){
         return userService.login(loginRequestDto);
     }
-    @GetMapping("/protected")
-    public Map<String, String> protectedEndpoint() {
-        return Map.of(
-                "message",
-                "JWT authentication successful!"
-        );
+
+    @GetMapping("/search/{email}")
+    public ResponseEntity<UserSearchResponseDto> searchUserByEmail(@PathVariable String email) {
+        return userService.searchUserByEmail(email);
     }
 
 
