@@ -1,4 +1,3 @@
-
 package com.trifler.trifler_chat_application.entity;
 
 import jakarta.persistence.*;
@@ -20,9 +19,15 @@ public class Conversation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column
+    private String name;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ConversationType type;
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
