@@ -32,6 +32,10 @@ public class Message {
     private Conversation conversation;
 
 
+    @Column(name = "`read`", nullable = false)
+    private boolean read = false;
+
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

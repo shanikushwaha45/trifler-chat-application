@@ -14,11 +14,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
-
-    @GetMapping("/get")
-    public String getString(){
-        return "Hello";
-    }
+//
+//    @GetMapping("/get")
+//    public String getString(){
+//        return "Hello";
+//    }
     @PostMapping("/register")
     public ResponseEntity<UserResponseDto> registerUser(@RequestBody @Valid UserRequestDto requestDto){
         return userService.registerUser(requestDto);

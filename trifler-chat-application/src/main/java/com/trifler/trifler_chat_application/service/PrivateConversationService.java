@@ -2,8 +2,10 @@
 package com.trifler.trifler_chat_application.service;
 
 import com.trifler.trifler_chat_application.dto.ConversationResponseDto;
+import com.trifler.trifler_chat_application.dto.MessagePageResponseDto;
 import com.trifler.trifler_chat_application.dto.MessageResponseDto;
 import com.trifler.trifler_chat_application.entity.*;
+import com.trifler.trifler_chat_application.exception.BadRequestException;
 import com.trifler.trifler_chat_application.exception.InvalidCredentialException;
 import com.trifler.trifler_chat_application.exception.ResourceNotFoundException;
 import com.trifler.trifler_chat_application.repository.ConversationParticipantRepository;
@@ -11,6 +13,9 @@ import com.trifler.trifler_chat_application.repository.ConversationRepository;
 import com.trifler.trifler_chat_application.repository.MessageRepository;
 import com.trifler.trifler_chat_application.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -127,6 +132,16 @@ public class PrivateConversationService {
     @Transactional
     public Long sendMessage(Long conversationId, String content) {
 
+        System.out.println("sendMessage method called");
+        if (content == null || content.trim().isEmpty()) {
+            throw new BadRequestException("Message cannot be empty");
+        }
+
+        if (content.trim().length() > 5000) {
+            throw new BadRequestException(
+                    "Message cannot exceed 5000 characters"
+            );
+        }
 
         String email = SecurityContextHolder
                 .getContext()
@@ -161,43 +176,94 @@ public class PrivateConversationService {
         return messageRepository.save(message).getId();
     }
 
-    @Transactional(readOnly = true)
-    public List<MessageResponseDto> getMessages(Long conversationId) {
-
+    @Transactional
+    public void markMessagesAsRead(Long conversationId) {
 
         String email = SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getName();
 
-
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
 
         conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Conversation not found"));
 
-
-        boolean isParticipant =
-                participantRepository
-                        .existsByConversationIdAndUserId(
-                                conversationId, user.getId());
+        boolean isParticipant = participantRepository
+                .existsByConversationIdAndUserId(
+                        conversationId, user.getId());
 
         if (!isParticipant) {
-            throw new RuntimeException(
+            throw new ResourceNotFoundException(
                     "You are not a participant in this conversation");
         }
 
+        List<Message> messages = messageRepository
+                .findByConversationIdAndReadFalse(conversationId);
 
-        List<Message> messages =
-                messageRepository
-                        .findByConversationIdOrderByCreatedAtAsc(conversationId);
+        for (Message message : messages) {
+            if (!message.getSender().getId().equals(user.getId())) {
+                message.setRead(true);
+            }
+        }
 
+        messageRepository.saveAll(messages);
+    }
+
+
+
+
+    @Transactional(readOnly = true)
+    public MessagePageResponseDto getMessages(
+            Long conversationId,
+            int page,
+            int size) {
+
+        if (page < 0) {
+            throw new BadRequestException(
+                    "Page number cannot be negative");
+        }
+
+        if (size < 1 || size > 100) {
+            throw new BadRequestException(
+                    "Page size must be between 1 and 100");
+        }
+
+        String email = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
+
+        conversationRepository.findById(conversationId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Conversation not found"));
+
+        boolean isParticipant = participantRepository
+                .existsByConversationIdAndUserId(
+                        conversationId, user.getId());
+
+        if (!isParticipant) {
+            throw new ResourceNotFoundException(
+                    "You are not a participant in this conversation");
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Message> messagePage = messageRepository
+                .findByConversationIdOrderByCreatedAtDesc(
+                        conversationId, pageable);
 
         List<MessageResponseDto> responseList = new ArrayList<>();
 
-        for (Message message : messages) {
+        for (Message message : messagePage.getContent()) {
             MessageResponseDto responseDto = new MessageResponseDto(
                     message.getId(),
                     message.getContent(),
@@ -209,7 +275,45 @@ public class PrivateConversationService {
             responseList.add(responseDto);
         }
 
-        return responseList;
+        return new MessagePageResponseDto(
+                responseList,
+                messagePage.getNumber(),
+                messagePage.getSize(),
+                messagePage.getTotalElements(),
+                messagePage.getTotalPages(),
+                messagePage.hasNext(),
+                messagePage.hasPrevious()
+        );
     }
+
+    @Transactional(readOnly = true)
+    public long getUnreadMessageCount(Long conversationId) {
+
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
+
+        conversationRepository.findById(conversationId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Conversation not found"));
+
+        boolean isParticipant = participantRepository
+                .existsByConversationIdAndUserId(
+                        conversationId, user.getId());
+
+        if (!isParticipant) {
+            throw new ResourceNotFoundException(
+                    "You are not a participant in this conversation");
+        }
+
+        return messageRepository
+                .countByConversationIdAndReadFalseAndSenderIdNot(
+                        conversationId, user.getId());
+    }
+
 
 }

@@ -48,4 +48,11 @@ public class GlobalExceptionHandler {
         map.put("message",e.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(map);
     }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Map<String,String>> badRequestException(BadRequestException e){
+        Map<String,String> map=new HashMap<>();
+        map.put("Message",e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(map);
+    }
 }
